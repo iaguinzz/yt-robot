@@ -78,9 +78,10 @@ class Yt:
         try:
             print(artistLink)
             indexN = listaDeArtistasLink.index(artistLink)
+            print(indexN)
+            print(len(listaDeArtistasLink))
             for m in range(0,indexN):
-                print(m)
-                listaDeArtistasLink.pop(m)
+                listaDeArtistasLink.pop(0)
         except Exception as e:
             print('erro no file: '.format(e))
         try:
