@@ -5,15 +5,17 @@ from webdriver_manager.chrome import ChromeDriverManager
 from data import *
 from googleapiclient.discovery import build
 import youtube_dl
+import time
 
 class Yt:
     def __init__(self):
         self.endpoint = 'https://www.youtube.com/watch?v='
         self.opt = webdriver.ChromeOptions()
-        self.opt.add_argument('headless')
+        #self.opt.add_argument('headless')
         #self.opt.add_experimental_option("mobileEmulation", {"deviceName" : "Nexus 5"})
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=self.opt)
-        self.vaga = 'https://www.vagalume.com.br/top100/artistas/nacional/2020/02/'
+
+        self.vagaURL = 'https://www.vagalume.com.br/browse/style/'
         self.yt = build('youtube', 'v3', developerKey=api_key)
 
     def getLinkOne(self, musicName, f='mp3', file=False, path=''):
@@ -47,101 +49,58 @@ class Yt:
         ydl = youtube_dl.YoutubeDL(ydlOpt)
         ydl.download([url])
 
+
     def Vagalume(self):
-        file = open('ondeparei.txt')
-        lineOfFile = file.readlines()
-        artistLink = lineOfFile[0]
-        artistLink = artistLink.replace('\n','')
-        file.close()
-        try:
-            self.driver.get(self.vaga)
-            artistasEL = self.driver.find_elements_by_class_name('h22')
-            listaDeArtistasLink = []
-        except Exception as e:
-            print(e)
-            print('erro ao pegar o link dos artistas')
-        try:
-            c = 0
-            for i in artistasEL:
-                if c ==0:
-                    c+=1
+        self.driver.get(self.vagaURL)
+        self.driver.find_element_by_xpath('//*[@id="body"]/div[3]/div[1]/ul/li[1]').click()
+        time.sleep(6)
+        j=1
+        linkArtistaList = []
+        nameArtista = []
+        while True:
+            try:
+                liArtista = self.driver.find_element_by_xpath(f'//*[@id="pushStateView"]/div[2]/ul[3]/li[{j}]')
+                j+=1
+            except:
+                j=1
+                break
+            
+            aArtista = liArtista.find_element_by_tag_name('a')
+            linkArtista = aArtista.get_attribute('href')
+            linkArtistaList.append(linkArtista)
+            
+            pArtista = liArtista.find_element_by_tag_name('p')
+            textArtista = pArtista.get_attribute('innerText')
+            nameArtista.append(textArtista)
+        print(f'Nome dos Artistas: {nameArtista}')
+        print(f'Link dos Artistas: {linkArtistaList}')
+
+        for o in range(0, len(linkArtistaList)):
+            self.driver.get(linkArtistaList[o])
+            time.sleep(6)
+            
+            print(f'Nome do Artista: {nameArtista[o]}')
+            i = 1
+            while True:
+                try:
+                    liMusica = self.driver.find_element_by_xpath(f'//*[@id="alfabetMusicList"]/li[{i}]')
+                    if i == 100 or i == 200 or i == 300:
+                        self.driver.execute_script("return arguments[0].scrollIntoView();", liMusica)
+                    i+=1
+                except Exception as e:
+                    j=1
+                    print('loop breaked')
+                    break
+                try:
+                    a = liMusica.find_element_by_tag_name('a')
+                    textNameMusic = a.get_attribute('innerText') ######## nome da música
+                    print(f'Música: {textNameMusic}')
+                except:
                     pass
-                else:
-                    a = i.get_attribute('href')
-                    listaDeArtistasLink.append(a)
-            print(listaDeArtistasLink)
-
-        except Exception as e:
-            print(e)
-            print('erro ao colocar os links dos artistas na lista')
-
-        try:
-            print(artistLink)
-            indexN = listaDeArtistasLink.index(artistLink)
-            print(indexN)
-            print(len(listaDeArtistasLink))
-            for m in range(0,indexN):
-                listaDeArtistasLink.pop(0)
-        except Exception as e:
-            print('erro no file: '.format(e))
-        try:
-            for i in listaDeArtistasLink:
-                arq = open('ondeparei.txt', 'w')
-                arq.write(i)
-                arq.close()
-                listaDeMusicas = []
-                self.driver.get(i)
-                musicNameEl = self.driver.find_elements_by_class_name('nameMusic')
-                for j in musicNameEl:
-                    musicNameText = j.get_attribute('innerText')
-                    listaDeMusicas.append(musicNameText)
-                for l in listaDeMusicas:
-                        print('lista de música: {}'.format(listaDeMusicas))
-                        print('lista de Artistas: {}'.format(listaDeArtistasLink))
-                        #print(l)
-                        genList = []
-                        gens = ''
-                        try:
-                            try:
-                                for p in range(1,7):
-                                    genEl = self.driver.find_element_by_xpath('//*[@id="artHeaderTitle"]/div/ul/li[{}]'.format(p))
-                                    genText = genEl.get_attribute('innerText')
-                                    genList.append(genText)
-                            except Exception as e:
-                                print('erro ao pegar os generos')
-                                print(e)
-                            lendeGenlist = len(genList)
-                            for gen in range(0,lendeGenlist):
-                                gens += genList[gen]
-                                if gen == lendeGenlist-1:
-                                    pass
-                                else:
-                                    gens += ' e '
-                            nameOfTheBand = self.driver.find_element_by_xpath('//*[@id="artHeaderTitle"]/h1/a').get_attribute('innerText')
-                            nameOfTheBand = nameOfTheBand.replace("'",'')
-                            nameOfTheBand = nameOfTheBand.replace('"','')
-                            gens = "'{}'".format(gens)
-                            art = "'{}'".format(nameOfTheBand)
-                            dir1 = 'mkdir {}/{}'.format(os.getcwd(), gens)
-                            dir2 = 'mkdir {}/{}/{}'.format(os.getcwd(),gens, art)
-                            path = '{}/{}'.format(gens, art)
-                            cmds = [dir1,dir2]
-
-                            for cmd in cmds:
-                                print(cmd)
-                                os.system(cmd)
-
-                        except Exception as e:
-                            print('erro ao criar dirétorio')
-                            print(e)
-
-
-                        self.getLinkOne(l,path=path)
-                        os.system('mv *.mp3 {}'.format(path))
-        except Exception as e:
-            print(e)
-            print('erro no maior for')
-
+                
+                
+                
+        time.sleep(10)
 
     def __del__(self):
         self.driver.close()
