@@ -6,9 +6,11 @@ from data import *
 from googleapiclient.discovery import build
 import youtube_dl
 import time
+import database
 
 class Yt:
     def __init__(self):
+        self.db = database.Database('homePC', 'iagomlkzika1')
         self.endpoint = 'https://www.youtube.com/watch?v='
         self.opt = webdriver.ChromeOptions()
         #self.opt.add_argument('headless')
@@ -45,70 +47,88 @@ class Yt:
         'key': 'FFmpegExtractAudio',
         'preferredcodec': formato,
         'preferredquality': '192',
-    }],}
+        }],}
         ydl = youtube_dl.YoutubeDL(ydlOpt)
         ydl.download([url])
 
-
     def Vagalume(self):
-        self.driver.get(self.vagaURL)
-        self.driver.find_element_by_xpath('//*[@id="body"]/div[3]/div[1]/ul/li[1]').click()
-        time.sleep(6)
-        j=1
-        linkArtistaList = []
-        nameArtista = []
+        p = 1
         while True:
+            self.driver.get(self.vagaURL)
+            title = self.driver.find_elements_by_class_name('itemTitle')
+            genero = title[p-1].get_attribute('innerText')
             try:
-                liArtista = self.driver.find_element_by_xpath(f'//*[@id="pushStateView"]/div[2]/ul[3]/li[{j}]')
-                j+=1
+                self.driver.find_element_by_xpath(f'//*[@id="body"]/div[3]/div[1]/ul/li[{p}]').click()
+                p+=1
             except:
-                j=1
                 break
-            
-            aArtista = liArtista.find_element_by_tag_name('a')
-            linkArtista = aArtista.get_attribute('href')
-            linkArtistaList.append(linkArtista)
-            
-            pArtista = liArtista.find_element_by_tag_name('p')
-            textArtista = pArtista.get_attribute('innerText')
-            nameArtista.append(textArtista)
-        print(f'Nome dos Artistas: {nameArtista}')
-        print(f'Link dos Artistas: {linkArtistaList}')
 
-        for o in range(0, len(linkArtistaList)):
-            self.driver.get(linkArtistaList[o])
+
+            self.db.createTable('musicDATA',genero,
+            'nome_do_artista VARCHAR(50)',
+            'nome_da_musica VARCHAR(50)',
+            )
+
             time.sleep(6)
-            
-            print(f'Nome do Artista: {nameArtista[o]}')
-            i = 1
+            j=1
+            linkArtistaList = []
+            nameArtista = []
             while True:
                 try:
-                    liMusica = self.driver.find_element_by_xpath(f'//*[@id="alfabetMusicList"]/li[{i}]')
-                    if i == 100 or i == 200 or i == 300:
-                        self.driver.execute_script("return arguments[0].scrollIntoView();", liMusica)
-                    i+=1
-                except Exception as e:
-                    j=1
-                    print('loop breaked')
-                    break
-                try:
-                    a = liMusica.find_element_by_tag_name('a')
-                    textNameMusic = a.get_attribute('innerText') ######## nome da música
-                    print(f'Música: {textNameMusic}')
+                    liArtista = self.driver.find_element_by_xpath(f'//*[@id="pushStateView"]/div[2]/ul[3]/li[{j}]')
+                    j+=1
                 except:
-                    pass
+                    j=1
+                    break
                 
+                aArtista = liArtista.find_element_by_tag_name('a')
+                linkArtista = aArtista.get_attribute('href')
+                linkArtistaList.append(linkArtista)
                 
+                pArtista = liArtista.find_element_by_tag_name('p')
+                textArtista = pArtista.get_attribute('innerText')
+                nameArtista.append(textArtista)
+            print(f'Nome dos Artistas: {nameArtista}')
+            print(f'Link dos Artistas: {linkArtistaList}')
+
+            for o in range(0, len(linkArtistaList)):
+                self.driver.get(linkArtistaList[o])
+                time.sleep(6)
                 
-        time.sleep(10)
+                print(f'Nome do Artista: {nameArtista[o]}')
+                i = 1
+                while True:
+                    try:
+                        liMusica = self.driver.find_element_by_xpath(f'//*[@id="alfabetMusicList"]/li[{i}]')
+                        if i == 100 or i == 200 or i == 300:
+                            self.driver.execute_script("return arguments[0].scrollIntoView();", liMusica)
+                        i+=1
+                    except Exception as e:
+                        j=1
+                        print('loop breaked')
+                        break
+                    try:
+                        a = liMusica.find_element_by_tag_name('a')
+                        textNameMusic = a.get_attribute('innerText') ######## nome da música
+                        print(f'Música: {textNameMusic}')
+                        self.db.insert('musicDATA',genero,'"{}","{}"'.format(nameArtista[o],textNameMusic))
+                    except:
+                        pass
+                    
+                    
+                
+            time.sleep(10)
+
 
     def __del__(self):
         self.driver.close()
 
 yt = Yt()
-yt.Vagalume()
-
-
+try:
+    yt.Vagalume()
+except:
+    a = open('log.txt', 'rb')
+    a.close()
 
 
 
